@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/mindbloom-app/static/css/main.effd68dc.css",
+    "main.js": "/mindbloom-app/static/js/main.5ebb43e7.js",
+    "index.html": "/mindbloom-app/index.html",
+    "main.effd68dc.css.map": "/mindbloom-app/static/css/main.effd68dc.css.map",
+    "main.5ebb43e7.js.map": "/mindbloom-app/static/js/main.5ebb43e7.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.effd68dc.css",
+    "static/js/main.5ebb43e7.js"
+  ]
+}
