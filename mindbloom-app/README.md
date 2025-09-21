@@ -1,215 +1,112 @@
-# MindBloom - AI-Powered Mental Wellness Companion
+# MindBloom - Pixel-Art Gamified Mental Health App
 
-A comprehensive mental wellness app featuring an AI therapist avatar with real-time lip-sync, conversational AI, and gamified wellness tracking.
+A comprehensive mental wellness platform that reframes mental health as universal rather than exceptional. Built with React, TypeScript, and modern web technologies.
 
-## Features
+## 🌟 Features
 
-### 🤖 AI Therapist Avatar
-- **3D Avatar**: Interactive therapist avatar using Three.js
-- **Real-time Lip-sync**: Synchronized mouth movements with speech
-- **Emotional Expressions**: Dynamic facial expressions based on conversation context
-- **Auto-greetings**: Welcoming animations and personalized introductions
+### Core Features
+- **AI-Powered Therapy Chat** - Chat with Mira, your AI wellness guide powered by Google Cloud Gemini
+- **2D Avatar with Lip-Sync** - Interactive avatar that responds to conversations with realistic lip-sync
+- **Voice Interaction** - Speech-to-text and text-to-speech capabilities
+- **Gamified Experience** - XP system, achievements, and progress tracking
 
-### 💬 Conversational AI
-- **Empathetic Dialogue**: CBT-based therapeutic conversations
-- **Safety Guardrails**: Crisis detection with immediate escalation protocols
-- **Multi-language Support**: English, Spanish, French, German
-- **Context Awareness**: Remembers conversation history and user preferences
+### Community Features
+- **Stories Hub** - Share and read community stories to normalize mental health conversations
+- **Challenges & Events** - CBT-inspired daily and weekly challenges
+- **Community Garden** - Visual representation of collective progress
+- **Peer Circles** - Small, safe groups for peer support
 
-### 🎮 Gamification System
-- **XP System**: Earn experience points through wellness activities
-- **Avatar Progression**: User avatar grows and evolves with progress
-- **Daily Streaks**: Maintain wellness habits with streak tracking
-- **Achievements**: Unlock rewards and milestones
+### Wellness Tools
+- **Progress Tracking** - Mood tracking, habit monitoring, and milestone celebrations
+- **Resources Library** - Bite-sized CBT tools, breathing exercises, and educational content
+- **Settings & Privacy** - Comprehensive privacy controls and personalization options
 
-### 🛡️ Safety & Privacy
-- **Crisis Detection**: Automatic detection of concerning language
-- **Emergency Resources**: Direct access to crisis helplines
-- **End-to-end Encryption**: Secure, private conversations
-- **Anonymous Mode**: No personal data collection required
+## 🚀 Live Demo
 
-### 🧘 Wellness Activities
-- **CBT Exercises**: Evidence-based cognitive behavioral therapy techniques
-- **Breathing Exercises**: Guided meditation and relaxation
-- **Journaling**: Reflective writing prompts
-- **Mindfulness**: Short meditation sessions
+**GitHub Pages:** [https://jeetruia.github.io/mindbloom-app](https://jeetruia.github.io/mindbloom-app)
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-### Frontend
-- **React 18** with TypeScript
-- **Three.js** for 3D avatar rendering
-- **Framer Motion** for smooth animations
-- **TailwindCSS** for styling
-- **Zustand** for state management
+- **Frontend:** React 18, TypeScript, TailwindCSS
+- **State Management:** Zustand
+- **Animation:** Framer Motion
+- **AI Integration:** Google Cloud Gemini API
+- **Speech:** Web Speech API
+- **Backend:** Supabase (configured but not required for basic functionality)
+- **Deployment:** GitHub Pages
 
-### Speech & AI
-- **Web Speech API** for TTS/STT
-- **OpenAI API** for conversational AI (configurable)
-- **Custom Lip-sync** engine for avatar synchronization
+## 📦 Installation
 
-### Backend (Optional)
-- **Firebase** for user data and sessions
-- **Node.js** for API orchestration
-- **Google Cloud TTS** for high-quality speech synthesis
+1. Clone the repository:
+```bash
+git clone https://github.com/jeetruia/mindbloom-app.git
+cd mindbloom-app
+```
 
-## Quick Start
+2. Install dependencies:
+```bash
+npm install
+```
 
-### Prerequisites
-- Node.js 16+ 
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd mindbloom-app
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**
-   ```bash
-   npm start
-   ```
-
-4. **Open your browser**
-   Navigate to `http://localhost:3000`
-
-### Environment Variables (Optional)
-
-Create a `.env` file for API integrations:
-
+3. Set up environment variables:
+Create a `.env` file in the root directory:
 ```env
-REACT_APP_OPENAI_API_KEY=your_openai_api_key
-REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
-REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_GEMINI_API_KEY=your_gemini_api_key_here
+REACT_APP_SUPABASE_URL=your_supabase_url_here
+REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
-## Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── AvatarScene.tsx  # 3D avatar with Three.js
-│   ├── ChatInterface.tsx # Chat UI with TTS/STT
-│   ├── UserAvatar.tsx   # User's progress avatar
-│   ├── XPBar.tsx        # Experience point display
-│   ├── WelcomeScreen.tsx # Onboarding flow
-│   ├── CrisisModal.tsx  # Crisis intervention UI
-│   └── LoadingScreen.tsx # App loading state
-├── hooks/
-│   └── useStore.ts      # Zustand state management
-├── services/
-│   ├── speechService.ts # TTS/STT/Lip-sync services
-│   └── aiService.ts     # AI conversation logic
-├── types/
-│   └── index.ts         # TypeScript type definitions
-└── App.tsx              # Main application component
-```
-
-## Key Components
-
-### AvatarScene
-- Renders the 3D therapist avatar using Three.js
-- Handles lip-sync animations based on speech
-- Manages emotional expressions and gestures
-- Provides interactive camera controls
-
-### ChatInterface
-- Real-time chat with voice input/output
-- Crisis detection and escalation
-- Quick action buttons for common responses
-- Message history and typing indicators
-
-### Speech Services
-- **TTSService**: Text-to-speech with voice selection
-- **STTService**: Speech-to-text with language support
-- **LipSyncService**: Audio analysis for viseme generation
-
-### AI Service
-- Context-aware conversation generation
-- CBT-based therapeutic responses
-- Crisis detection and intervention
-- Sentiment analysis and mood tracking
-
-## Customization
-
-### Avatar Appearance
-Modify the avatar in `AvatarScene.tsx`:
-- Change colors, size, and proportions
-- Add custom animations
-- Integrate Ready Player Me avatars
-- Add clothing and accessories
-
-### AI Personality
-Customize responses in `aiService.ts`:
-- Adjust empathy levels
-- Modify therapeutic approaches
-- Add domain-specific knowledge
-- Implement custom crisis protocols
-
-### UI Theme
-Update `tailwind.config.js`:
-- Change color schemes
-- Modify animations
-- Adjust spacing and typography
-- Add custom components
-
-## Deployment
-
-### Build for Production
+4. Start the development server:
 ```bash
-npm run build
+npm start
 ```
 
-### Deploy to Vercel
-```bash
-npm install -g vercel
-vercel --prod
-```
+## 🔧 Configuration
 
-### Deploy to Netlify
-```bash
-npm install -g netlify-cli
-netlify deploy --prod --dir=build
-```
+### Gemini API Setup
+1. Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Add it to your `.env` file as `REACT_APP_GEMINI_API_KEY`
 
-## Contributing
+### Supabase Setup (Optional)
+1. Create a new project at [Supabase](https://supabase.com)
+2. Run the SQL schema from `supabase-schema.sql`
+3. Add your credentials to `.env`
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+## 🎨 Design Philosophy
 
-## License
+MindBloom is built on the principle that mental health is universal, not exceptional. The app uses:
 
-MIT License - see LICENSE file for details
+- **Pixel-art aesthetics** for a playful, approachable feel
+- **Gamification** to make wellness engaging
+- **Community features** to reduce stigma through shared experiences
+- **Privacy-first design** to ensure user safety and comfort
 
-## Support
+## 📱 Pages Overview
 
-For questions or support:
-- Create an issue on GitHub
-- Contact: support@mindbloom.app
-- Crisis Support: 988 (US) or your local crisis helpline
+1. **Dashboard** - Wellness snapshot and quick actions
+2. **Chat with Mira** - AI therapy conversations with lip-sync avatar
+3. **Stories** - Community story sharing and reading
+4. **Challenges** - CBT-inspired wellness challenges
+5. **Garden** - Personal and community growth visualization
+6. **Progress** - Mood tracking and achievement system
+7. **Resources** - Self-help tools and educational content
+8. **Settings** - Privacy controls and personalization
 
-## Roadmap
+## 🤝 Contributing
 
-- [ ] Ready Player Me avatar integration
-- [ ] Advanced lip-sync with phoneme detection
-- [ ] Mobile app with React Native
-- [ ] VR/AR support
-- [ ] Group therapy sessions
-- [ ] Integration with wearable devices
-- [ ] Advanced analytics dashboard
-- [ ] Multi-therapist personalities
+This is a demonstration project showcasing modern web development practices for mental health applications. Feel free to fork and adapt for your own projects.
+
+## 📄 License
+
+This project is for educational and demonstration purposes. Please ensure compliance with all applicable regulations when using AI and mental health technologies.
+
+## 🆘 Support
+
+For immediate mental health support, please contact:
+- **988 Suicide & Crisis Lifeline** (US): Call or text 988
+- **Crisis Text Line**: Text HOME to 741741
+- **SAMHSA National Helpline**: 1-800-662-HELP (4357)
 
 ---
 
-**Important**: This app is designed for wellness support and should not replace professional mental health care. Always consult with qualified mental health professionals for serious concerns.
+Built with ❤️ for mental wellness and community support.
