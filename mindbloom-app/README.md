@@ -1,112 +1,178 @@
-# MindBloom - Pixel-Art Gamified Mental Health App
+# 🌸 MindBloom - AI-Powered Mental Wellness App
 
-A comprehensive mental wellness platform that reframes mental health as universal rather than exceptional. Built with React, TypeScript, and modern web technologies.
+A comprehensive mental wellness application featuring AI-powered therapy, gamification, community support, and Google Cloud integration.
 
-## 🌟 Features
+## ✨ Features
 
-### Core Features
-- **AI-Powered Therapy Chat** - Chat with Mira, your AI wellness guide powered by Google Cloud Gemini
-- **2D Avatar with Lip-Sync** - Interactive avatar that responds to conversations with realistic lip-sync
-- **Voice Interaction** - Speech-to-text and text-to-speech capabilities
-- **Gamified Experience** - XP system, achievements, and progress tracking
+### 🤖 AI-Powered Therapy
+- **Chat with Mira**: Licensed AI therapist using Vertex AI/Gemini
+- **Sentiment Analysis**: Real-time emotion detection and mood tracking
+- **Crisis Detection**: Automatic identification of critical situations
+- **Therapeutic Techniques**: CBT, DBT, and ACT integration
+- **Voice Support**: Speech-to-Text and Text-to-Speech in multiple languages
 
-### Community Features
-- **Stories Hub** - Share and read community stories to normalize mental health conversations
-- **Challenges & Events** - CBT-inspired daily and weekly challenges
-- **Community Garden** - Visual representation of collective progress
-- **Peer Circles** - Small, safe groups for peer support
+### 🎮 Gamification System
+- **XP & Leveling**: Complete challenges to earn experience points
+- **Streaks**: Daily engagement tracking with bonus multipliers
+- **Achievements**: Unlock badges and milestones
+- **Leaderboards**: Friendly competition with friends
+- **Reward Store**: Redeem XP for themes and perks
 
-### Wellness Tools
-- **Progress Tracking** - Mood tracking, habit monitoring, and milestone celebrations
-- **Resources Library** - Bite-sized CBT tools, breathing exercises, and educational content
-- **Settings & Privacy** - Comprehensive privacy controls and personalization options
+### 🎯 Challenges & Games
+- **Breathing Dragon**: Camera-integrated breathing exercise
+- **Gratitude Game**: AI-analyzed gratitude journaling
+- **Memory Match**: Cognitive training game
+- **Type Racer**: Speed typing challenge
+- **Wellness Trivia**: Knowledge-based game
 
-## 🚀 Live Demo
+### 👥 Community Features
+- **Peer Circles**: Anonymous support groups with AI moderation
+- **Community Stories**: Share experiences with sentiment analysis
+- **Voice Check-ins**: Record reflections that are automatically analyzed
+- **Mood Pulse**: Real-time group mood visualization
 
-**GitHub Pages:** [https://jeetruia.github.io/mindbloom-app](https://jeetruia.github.io/mindbloom-app)
+### 📊 Analytics & Insights
+- **Wellness Dashboard**: AI-generated insights and recommendations
+- **Progress Tracking**: Visual trend analysis over time
+- **Bloom Meter**: Track emotional evolution through stories
+- **Personalized Recommendations**: AI-curated resources and activities
+
+### 🎨 Unique UI Components
+- Particle backgrounds with interactive connections
+- Mood rings with floating particles
+- Animated confetti celebrations
+- Progress radial indicators
+- Interactive mood meters
+- Sound effects and haptic feedback
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 14+ installed
+- Google Cloud Platform account (optional, for full features)
+- Git installed
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Jeetruia/mindbloom-app.git
+   cd mindbloom-app
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+4. **Start the development server:**
+   ```bash
+   npm start
+   ```
+
+### Backend Proxy Setup (Required for Google Cloud features)
+
+1. **Navigate to server-proxy:**
+   ```bash
+   cd server-proxy
+   npm install
+   ```
+
+2. **Set up environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Google Cloud credentials
+   ```
+
+3. **Start the proxy server:**
+   ```bash
+   npm start
+   # Server runs on http://localhost:5001
+   ```
+
+4. **In another terminal, start the React app:**
+   ```bash
+   cd ..
+   npm start
+   # App runs on http://localhost:3000
+   ```
+
+## 📚 Documentation
+
+- **[Google Cloud Setup Guide](GOOGLE_CLOUD_SETUP.md)** - Complete Google Cloud configuration
+- **[Deployment Guide](DEPLOYMENT.md)** - Hosting instructions for various platforms
+- **[Enhancements Documentation](ENHANCEMENTS.md)** - Feature documentation
+- **[UI Components Guide](NEW_UI_COMPONENTS.md)** - Component library
+
+## 🌐 Deployment
+
+### Option 1: Vercel (Frontend) + Cloud Run (Backend)
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+### Option 2: Netlify (Frontend) + Railway (Backend)
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+### Option 3: Full Google Cloud
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+## 🔐 Security
+
+- **Never commit:**
+  - `.env` files
+  - `service-account-key.json` files
+  - API keys in code
+
+- **Use environment variables:**
+  - All sensitive data should be in environment variables
+  - Use platform-specific secret management
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** React 18, TypeScript, TailwindCSS
+- **Frontend:** React, TypeScript, Tailwind CSS, Framer Motion
+- **Backend:** Express.js, Node.js
+- **AI:** Google Cloud Vertex AI, Gemini
+- **Storage:** Google Cloud Storage
+- **Speech:** Google Cloud Speech-to-Text, Text-to-Speech
+- **Analytics:** Google Cloud Natural Language API
 - **State Management:** Zustand
 - **Animation:** Framer Motion
-- **AI Integration:** Google Cloud Gemini API
-- **Speech:** Web Speech API
-- **Backend:** Supabase (configured but not required for basic functionality)
-- **Deployment:** GitHub Pages
+- **3D Graphics:** Three.js, React Three Fiber
 
-## 📦 Installation
+## 📝 Scripts
 
-1. Clone the repository:
-```bash
-git clone https://github.com/jeetruia/mindbloom-app.git
-cd mindbloom-app
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Set up environment variables:
-Create a `.env` file in the root directory:
-```env
-REACT_APP_GEMINI_API_KEY=your_gemini_api_key_here
-REACT_APP_SUPABASE_URL=your_supabase_url_here
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-4. Start the development server:
-```bash
-npm start
-```
-
-## 🔧 Configuration
-
-### Gemini API Setup
-1. Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Add it to your `.env` file as `REACT_APP_GEMINI_API_KEY`
-
-### Supabase Setup (Optional)
-1. Create a new project at [Supabase](https://supabase.com)
-2. Run the SQL schema from `supabase-schema.sql`
-3. Add your credentials to `.env`
-
-## 🎨 Design Philosophy
-
-MindBloom is built on the principle that mental health is universal, not exceptional. The app uses:
-
-- **Pixel-art aesthetics** for a playful, approachable feel
-- **Gamification** to make wellness engaging
-- **Community features** to reduce stigma through shared experiences
-- **Privacy-first design** to ensure user safety and comfort
-
-## 📱 Pages Overview
-
-1. **Dashboard** - Wellness snapshot and quick actions
-2. **Chat with Mira** - AI therapy conversations with lip-sync avatar
-3. **Stories** - Community story sharing and reading
-4. **Challenges** - CBT-inspired wellness challenges
-5. **Garden** - Personal and community growth visualization
-6. **Progress** - Mood tracking and achievement system
-7. **Resources** - Self-help tools and educational content
-8. **Settings** - Privacy controls and personalization
+- `npm start` - Start development server
+- `npm run build` - Build for production
+- `npm test` - Run tests
+- `npm run deploy` - Deploy to GitHub Pages
 
 ## 🤝 Contributing
 
-This is a demonstration project showcasing modern web development practices for mental health applications. Feel free to fork and adapt for your own projects.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-This project is for educational and demonstration purposes. Please ensure compliance with all applicable regulations when using AI and mental health technologies.
+This project is licensed under the MIT License.
 
-## 🆘 Support
+## 🙏 Acknowledgments
 
-For immediate mental health support, please contact:
-- **988 Suicide & Crisis Lifeline** (US): Call or text 988
-- **Crisis Text Line**: Text HOME to 741741
-- **SAMHSA National Helpline**: 1-800-662-HELP (4357)
+- Google Cloud Platform for AI services
+- React community for amazing tools
+- Open source contributors
+
+## 📧 Support
+
+For issues and questions, please open an issue on GitHub.
 
 ---
 
-Built with ❤️ for mental wellness and community support.
+Made with ❤️ for mental wellness and community support
