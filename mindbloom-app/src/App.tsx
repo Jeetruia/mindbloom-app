@@ -2,20 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from './hooks/useStore';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { GamificationProvider } from './contexts/GamificationContext';
 import { AvatarScene } from './components/AvatarScene2D';
 import { BotpressChat } from './components/BotpressChat';
+import { EnhancedTherapyChat } from './components/EnhancedTherapyChat';
 import { UserAvatar } from './components/UserAvatar';
 import { XPBar } from './components/XPBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { CrisisModal } from './components/CrisisModal';
 import { LoadingScreen } from './components/LoadingScreen';
-import { CommunityPlatform } from './components/CommunityPlatform';
+import { CommunityStories } from './components/CommunityStories';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { Dashboard } from './components/Dashboard';
 import { PeerCircles } from './components/PeerCircles';
-import { StoriesPage } from './components/StoriesPage';
 import { ChallengesPage } from './components/ChallengesPage';
-import { GardenPage } from './components/GardenPage';
+import { ChallengesPageEnhanced } from './components/ChallengesPageEnhanced';
 import { ProgressPage } from './components/ProgressPage';
 import { ResourcesPage } from './components/ResourcesPage';
 import { SettingsPage } from './components/SettingsPage';
@@ -33,7 +35,7 @@ function App() {
 
   const [showWelcome, setShowWelcome] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'chat' | 'community' | 'circles' | 'stories' | 'challenges' | 'garden' | 'progress' | 'resources' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'chat' | 'community' | 'circles' | 'challenges' | 'progress' | 'resources' | 'settings'>('dashboard');
   const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
   const [currentAvatarMessage, setCurrentAvatarMessage] = useState('');
 
@@ -82,8 +84,10 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="App min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <ThemeProvider>
+      <GamificationProvider>
+        <Router>
+          <div className="App min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <AnimatePresence>
           {showWelcome && (
             <WelcomeScreen onComplete={handleWelcomeComplete} />
@@ -133,10 +137,8 @@ function App() {
                     { id: 'dashboard', label: '🏠 Dashboard', page: 'dashboard' },
                     { id: 'chat', label: '💬 Chat with Mira', page: 'chat' },
                     { id: 'circles', label: '👥 Peer Circles', page: 'circles' },
-                    { id: 'community', label: '🌍 Community', page: 'community' },
-                    { id: 'stories', label: '📖 Stories', page: 'stories' },
+                    { id: 'community', label: '🌍 Community & Stories', page: 'community' },
                     { id: 'challenges', label: '🎯 Challenges', page: 'challenges' },
-                    { id: 'garden', label: '🌱 Garden', page: 'garden' },
                     { id: 'progress', label: '📊 Progress', page: 'progress' },
                     { id: 'resources', label: '📚 Resources', page: 'resources' },
                     { id: 'settings', label: '⚙️ Settings', page: 'settings' }
@@ -168,7 +170,10 @@ function App() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Dashboard user={user} onNavigate={setCurrentPage} />
+                    <Dashboard 
+                      user={user} 
+                      onNavigate={(page) => setCurrentPage(page as typeof currentPage)} 
+                    />
                   </motion.div>
                 )}
 
@@ -188,7 +193,7 @@ function App() {
                       />
                     </div>
                     <div className="w-96 bg-white/80 backdrop-blur-sm border-l border-gray-200">
-                      <BotpressChat 
+                      <EnhancedTherapyChat 
                         onMessage={(message, isFromUser) => {
                           if (!isFromUser) {
                             setCurrentAvatarMessage(message);
@@ -223,19 +228,7 @@ function App() {
                     transition={{ duration: 0.3 }}
                     className="h-full"
                   >
-                    <CommunityPlatform />
-                  </motion.div>
-                )}
-
-                {currentPage === 'stories' && (
-                  <motion.div
-                    key="stories"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <StoriesPage user={user} onBack={() => setCurrentPage('dashboard')} />
+                    <CommunityStories user={user} />
                   </motion.div>
                 )}
 
@@ -247,19 +240,7 @@ function App() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ChallengesPage user={user} onBack={() => setCurrentPage('dashboard')} />
-                  </motion.div>
-                )}
-
-                {currentPage === 'garden' && (
-                  <motion.div
-                    key="garden"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <GardenPage user={user} onBack={() => setCurrentPage('dashboard')} />
+                    <ChallengesPageEnhanced user={user} onBack={() => setCurrentPage('dashboard')} />
                   </motion.div>
                 )}
 
@@ -308,8 +289,10 @@ function App() {
           <Route path="/journaling" element={<div>Journaling</div>} />
           <Route path="/exercises" element={<div>CBT Exercises</div>} />
         </Routes>
-      </div>
-    </Router>
+          </div>
+        </Router>
+      </GamificationProvider>
+    </ThemeProvider>
   );
 }
 

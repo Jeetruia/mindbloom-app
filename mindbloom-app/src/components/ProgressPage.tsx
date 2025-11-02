@@ -16,8 +16,22 @@ import {
   Clock,
   Trophy,
   Gem,
-  Crown
+  Crown,
+  Mic,
+  MicOff,
+  Sparkles,
+  FileText,
+  Gift,
+  LineChart
 } from 'lucide-react';
+import { progressService, WellnessInsight, EmotionData, Milestone } from '../services/progressService';
+import { useStore } from '../hooks/useStore';
+import { xpService } from '../services/xpService';
+import { ProgressRadial } from './ui/ProgressRadial';
+import { MoodMeter } from './ui/MoodMeter';
+import { ParticleBackground } from './ui/ParticleBackground';
+import { ConfettiBurst } from './ui/ConfettiBurst';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface MoodEntry {
   id: string;
@@ -125,12 +139,21 @@ const rarityColors = {
 };
 
 export function ProgressPage({ user, onBack }: ProgressPageProps) {
+  const { setUser } = useStore();
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>(sampleMoodEntries);
   const [stats, setStats] = useState<Stat[]>(sampleStats);
   const [achievements, setAchievements] = useState<Achievement[]>(sampleAchievements);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('week');
-  const [userLevel, setUserLevel] = useState(5);
-  const [userXP, setUserXP] = useState(1250);
+  const [userLevel, setUserLevel] = useState(user?.avatarLevel || 5);
+  const [userXP, setUserXP] = useState(user?.xp || 1250);
+  
+  // AI Features
+  const [wellnessInsight, setWellnessInsight] = useState<WellnessInsight | null>(null);
+  const [emotionTrends, setEmotionTrends] = useState<EmotionData[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [voiceJournal, setVoiceJournal] = useState<any>(null);
 
   const getMoodTrend = () => {
     const recentMoods = moodEntries.slice(0, 7);
@@ -170,8 +193,100 @@ export function ProgressPage({ user, onBack }: ProgressPageProps) {
     return Math.max(0, Math.min(100, progress));
   };
 
+  // Load AI insights
+  useEffect(() => {
+    if (user) {
+      loadWellnessInsights();
+      loadEmotionTrends();
+      checkMilestones();
+    }
+  }, [user, moodEntries]);
+
+  const loadWellnessInsights = async () => {
+    if (!user) return;
+    
+    setIsLoadingInsights(true);
+    try {
+      const activities = moodEntries.map(entry => ({
+        content: entry.activities.join(' '),
+        timestamp: entry.date,
+      }));
+      
+      const insight = await progressService.generateWellnessInsights(user.id, activities);
+      setWellnessInsight(insight);
+    } catch (error) {
+      console.error('Error loading wellness insights:', error);
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  };
+
+  const loadEmotionTrends = async () => {
+    if (!user) return;
+    
+    try {
+      const activities = moodEntries.map(entry => ({
+        text: entry.activities.join(' '),
+        timestamp: entry.date,
+      }));
+      
+      const trends = await progressService.calculateEmotionTrends(user.id, activities);
+      setEmotionTrends(trends);
+    } catch (error) {
+      console.error('Error loading emotion trends:', error);
+    }
+  };
+
+  const checkMilestones = () => {
+    if (!user) return;
+    
+    const activities = moodEntries.map(entry => entry.activities).flat();
+    const streak = getStreakDays();
+    const level = user.avatarLevel || userLevel;
+    
+    const newMilestones = progressService.checkMilestones(activities, level, streak);
+    setMilestones(newMilestones);
+  };
+
+  const handleVoiceJournal = async () => {
+    if (!user) return;
+
+    setIsRecording(true);
+    try {
+      const result = await progressService.processVoiceJournal(user.id);
+      setVoiceJournal(result);
+
+      // Award XP
+      const xpResult = await xpService.addXP(user.id, user.xp || 0, {
+        id: `voice-journal-${Date.now()}`,
+        type: 'journal',
+        xp: 15,
+        description: 'Voice journal entry',
+      });
+
+      if (setUser) {
+        setUser({
+          ...user,
+          xp: xpResult.newXP,
+          avatarLevel: xpResult.newLevel,
+        });
+      }
+
+      // Reload insights
+      await loadWellnessInsights();
+    } catch (error) {
+      console.error('Error with voice journal:', error);
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
+  const { mood, intensity } = useTheme();
+  const [showConfetti, setShowConfetti] = useState(false);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
+      <ParticleBackground particleCount={25} className="opacity-40" />
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 p-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -203,6 +318,235 @@ export function ProgressPage({ user, onBack }: ProgressPageProps) {
       </div>
 
       <div className="max-w-6xl mx-auto p-6">
+        {/* AI Wellness Insights */}
+        {wellnessInsight && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-lg p-6 border-2 border-blue-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <Brain className="w-6 h-6 mr-2 text-blue-500" />
+                AI Wellness Insights
+                <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                  Powered by Google Cloud AI
+                </span>
+              </h2>
+              {isLoadingInsights && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"
+                  />
+                  Analyzing...
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="bg-white rounded-xl p-4">
+                <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                  <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                  Summary
+                </h3>
+                <p className="text-sm text-gray-700">{wellnessInsight.summary}</p>
+              </div>
+
+              {/* Trends */}
+              {wellnessInsight.trends && wellnessInsight.trends.length > 0 && (
+                <div className="bg-white rounded-xl p-4">
+                  <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                    <TrendingUp className="w-4 h-4 mr-2 text-green-500" />
+                    Key Trends
+                  </h3>
+                  <ul className="space-y-1">
+                    {wellnessInsight.trends.map((trend, idx) => (
+                      <li key={idx} className="text-sm text-gray-700 flex items-start">
+                        <span className="text-green-500 mr-2">•</span>
+                        {trend}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Recommendations */}
+              {wellnessInsight.recommendations && wellnessInsight.recommendations.length > 0 && (
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+                  <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                    <Heart className="w-4 h-4 mr-2 text-pink-500" />
+                    Personalized Recommendations
+                  </h3>
+                  <ul className="space-y-2">
+                    {wellnessInsight.recommendations.map((rec, idx) => (
+                      <li key={idx} className="text-sm text-gray-700 flex items-start">
+                        <span className="text-pink-500 mr-2">✨</span>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Sentiment & Emotions */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white rounded-xl p-4">
+                  <h3 className="text-xs font-medium text-gray-600 mb-2">Overall Sentiment</h3>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(wellnessInsight.sentiment + 1) * 50}%` }}
+                        transition={{ duration: 0.5 }}
+                        className={`h-2 rounded-full ${
+                          wellnessInsight.sentiment > 0.3 ? 'bg-green-500' :
+                          wellnessInsight.sentiment < -0.3 ? 'bg-red-500' :
+                          'bg-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <span className={`text-xs font-semibold ${
+                      wellnessInsight.sentiment > 0.3 ? 'text-green-600' :
+                      wellnessInsight.sentiment < -0.3 ? 'text-red-600' :
+                      'text-gray-600'
+                    }`}>
+                      {wellnessInsight.sentiment > 0.3 ? 'Positive' :
+                       wellnessInsight.sentiment < -0.3 ? 'Negative' :
+                       'Neutral'}
+                    </span>
+                  </div>
+                </div>
+                
+                {wellnessInsight.emotions && wellnessInsight.emotions.length > 0 && (
+                  <div className="bg-white rounded-xl p-4">
+                    <h3 className="text-xs font-medium text-gray-600 mb-2">Top Emotions</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {wellnessInsight.emotions.slice(0, 3).map((emotion, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                        >
+                          {emotion.emotion}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Voice Journal Button */}
+        <div className="mb-6 flex justify-end">
+          <button
+            onClick={handleVoiceJournal}
+            disabled={isRecording}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
+              isRecording
+                ? 'bg-red-100 text-red-600 animate-pulse'
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+            }`}
+          >
+            {isRecording ? (
+              <>
+                <MicOff className="w-4 h-4" />
+                <span>Recording...</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-4 h-4" />
+                <span>Voice Journal Entry</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Voice Journal Result */}
+        {voiceJournal && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-white rounded-xl shadow-lg p-4 border-2 border-purple-200"
+          >
+            <div className="flex items-center mb-3">
+              <FileText className="w-5 h-5 text-purple-500 mr-2" />
+              <h3 className="font-semibold text-gray-800">Latest Voice Journal</h3>
+            </div>
+            <p className="text-sm text-gray-700 mb-2">{voiceJournal.summary}</p>
+            <div className="flex items-center space-x-4 text-xs text-gray-600">
+              <span>Sentiment: {voiceJournal.sentiment > 0 ? 'Positive' : 'Neutral'}</span>
+              <span>Emotion: {voiceJournal.emotion}</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Recent Milestones */}
+        {milestones.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <Gift className="w-6 h-6 mr-2 text-yellow-500" />
+              Recent Milestones
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {milestones.map((milestone, idx) => (
+                <motion.div
+                  key={milestone.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl shadow-lg p-4 border-2 border-yellow-200"
+                >
+                  <div className="text-3xl mb-2">{milestone.icon}</div>
+                  <h3 className="font-semibold text-gray-800 mb-1">{milestone.title}</h3>
+                  <p className="text-sm text-gray-600">{milestone.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Emotion Trends Graph */}
+        {emotionTrends.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-white rounded-2xl shadow-lg p-6"
+          >
+            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <LineChart className="w-6 h-6 mr-2 text-blue-500" />
+              Emotion Trends Over Time
+            </h2>
+            <div className="h-64 flex items-end justify-between space-x-2">
+              {emotionTrends.slice(-14).map((entry, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(entry.sentiment + 1) * 50}%` }}
+                    transition={{ delay: idx * 0.05, duration: 0.5 }}
+                    className={`w-full rounded-t ${
+                      entry.sentiment > 0.3 ? 'bg-green-400' :
+                      entry.sentiment < -0.3 ? 'bg-red-400' :
+                      'bg-gray-400'
+                    }`}
+                    style={{ minHeight: '4px' }}
+                  />
+                  <span className="text-xs text-gray-500 mt-1">
+                    {entry.date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Timeframe Selector */}
         <div className="mb-6">
           <div className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
@@ -258,73 +602,84 @@ export function ProgressPage({ user, onBack }: ProgressPageProps) {
           </div>
         </div>
 
-        {/* Stats Overview */}
+        {/* Stats Overview - Enhanced with ProgressRadial */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Wellness Stats</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.name}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl shadow-lg p-4"
+                className="glass-strong rounded-xl shadow-xl p-6 text-center hover:shadow-2xl transition-shadow"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-8 h-8 bg-gradient-to-r ${stat.color} rounded-full flex items-center justify-center text-white`}>
-                      {stat.icon}
-                    </div>
-                    <span className="font-medium text-gray-800">{stat.name}</span>
-                  </div>
-                  <span className="text-sm text-gray-600">{stat.value}/{stat.max}</span>
-                </div>
-                <div className="relative">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <motion.div
-                      className={`bg-gradient-to-r ${stat.color} h-2 rounded-full`}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(stat.value / stat.max) * 100}%` }}
-                      transition={{ duration: 1, delay: index * 0.1 }}
-                    />
-                  </div>
-                </div>
+                <ProgressRadial
+                  progress={(stat.value / stat.max) * 100}
+                  size={100}
+                  color={stat.color.includes('red') ? '#EF4444' : stat.color.includes('blue') ? '#3B82F6' : stat.color.includes('green') ? '#10B981' : '#8B5CF6'}
+                  icon={stat.icon}
+                  label={stat.name}
+                  showPercentage={true}
+                />
               </motion.div>
             ))}
           </div>
         </div>
+        
+        {/* Mood Meter */}
+        <div className="mb-8 flex justify-center">
+          <div className="glass-strong rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Current Mood Intensity</h3>
+            <MoodMeter mood="positive" intensity={intensity} size={250} />
+          </div>
+        </div>
 
-        {/* Mood Tracker */}
+        {/* Mood Tracker - Enhanced */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Mood Tracker</h2>
-          <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="glass-strong rounded-2xl shadow-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <span className="text-2xl">{moodIcons[moodEntries[0]?.mood || 'sunny']}</span>
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <span className="text-3xl">{moodIcons[moodEntries[0]?.mood || 'sunny']}</span>
+                </motion.div>
                 <span className="text-lg font-medium">Today's Mood</span>
               </div>
               <div className="text-right">
                 <div className="text-sm text-gray-600">Average Mood</div>
-                <div className="text-lg font-bold text-blue-600">{getMoodTrend().toFixed(1)}/5</div>
+                <motion.div
+                  className="text-lg font-bold text-blue-600"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: 'spring' }}
+                >
+                  {getMoodTrend().toFixed(1)}/5
+                </motion.div>
               </div>
             </div>
             
             <div className="grid grid-cols-7 gap-2">
               {moodEntries.slice(0, 7).map((entry, index) => (
-                <motion.div
+                <motion.button
                   key={entry.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="text-center"
+                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, type: 'spring' }}
+                  whileHover={{ scale: 1.1, y: -5 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="text-center group"
                 >
-                  <div className={`w-12 h-12 bg-gradient-to-r ${moodColors[entry.mood]} rounded-full flex items-center justify-center text-white text-xl mx-auto mb-2`}>
+                  <div className={`w-14 h-14 bg-gradient-to-r ${moodColors[entry.mood]} rounded-full flex items-center justify-center text-white text-xl mx-auto mb-2 shadow-lg group-hover:shadow-xl transition-shadow`}>
                     {moodIcons[entry.mood]}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-600 font-medium">
                     {entry.date.toLocaleDateString('en', { weekday: 'short' })}
                   </div>
-                </motion.div>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -435,6 +790,10 @@ export function ProgressPage({ user, onBack }: ProgressPageProps) {
           </div>
         </div>
       </div>
+      
+      {/* Confetti Burst for Achievements */}
+      <ConfettiBurst trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
     </div>
   );
 }
+

@@ -19,8 +19,21 @@ import {
   Info,
   ExternalLink,
   Save,
-  Share2
+  Share2,
+  Mic,
+  MicOff,
+  Sparkles,
+  Gift,
+  TrendingUp,
+  Target,
+  Unlock,
+  CheckCircle
 } from 'lucide-react';
+import { resourceService, DailyDose, LearningPath, Resource as ServiceResource } from '../services/resourceService';
+import { useStore } from '../hooks/useStore';
+import { ParticleBackground } from './ui/ParticleBackground';
+import { FloatingActionButton } from './ui/FloatingActionButton';
+import { GradientText } from './ui/GradientText';
 
 interface Resource {
   id: string;
@@ -153,11 +166,73 @@ const emergencyContacts = [
 ];
 
 export function ResourcesPage({ user, onBack }: ResourcesPageProps) {
+  const { setUser } = useStore();
   const [resources, setResources] = useState<Resource[]>(sampleResources);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  
+  // AI Features
+  const [aiRecommendations, setAIRecommendations] = useState<ServiceResource[]>([]);
+  const [dailyDose, setDailyDose] = useState<DailyDose | null>(null);
+  const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceSearchResults, setVoiceSearchResults] = useState<ServiceResource[]>([]);
+  const [showVoiceSearch, setShowVoiceSearch] = useState(false);
+
+  // Load AI features
+  useEffect(() => {
+    if (user) {
+      loadAIRecommendations();
+      loadDailyDose();
+      loadLearningPath();
+    }
+  }, [user]);
+
+  const loadAIRecommendations = async () => {
+    if (!user) return;
+    try {
+      const recommendations = await resourceService.getRecommendations(user.id);
+      setAIRecommendations(recommendations);
+    } catch (error) {
+      console.error('Error loading AI recommendations:', error);
+    }
+  };
+
+  const loadDailyDose = async () => {
+    if (!user) return;
+    try {
+      const dose = await resourceService.generateDailyDose(user.id);
+      setDailyDose(dose);
+    } catch (error) {
+      console.error('Error loading daily dose:', error);
+    }
+  };
+
+  const loadLearningPath = async () => {
+    if (!user) return;
+    try {
+      const path = await resourceService.generateLearningPath(user.id, user.avatarLevel || 1);
+      setLearningPath(path);
+    } catch (error) {
+      console.error('Error loading learning path:', error);
+    }
+  };
+
+  const handleVoiceSearch = async () => {
+    setIsRecording(true);
+    try {
+      const result = await resourceService.processVoiceSearch(user?.id || '');
+      setVoiceSearchResults(result.results);
+      setSearchQuery(result.transcript);
+      setShowVoiceSearch(false);
+    } catch (error) {
+      console.error('Error with voice search:', error);
+    } finally {
+      setIsRecording(false);
+    }
+  };
 
   const filteredResources = resources.filter(resource => {
     const matchesCategory = selectedCategory === 'all' || resource.category === selectedCategory;
@@ -165,6 +240,12 @@ export function ResourcesPage({ user, onBack }: ResourcesPageProps) {
                          resource.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // Combine regular resources with AI recommendations and voice search results
+  const allResources = [...resources, ...aiRecommendations, ...voiceSearchResults]
+    .filter((resource, index, self) => 
+      index === self.findIndex(r => r.id === resource.id)
+    );
 
   const handleBookmark = (resourceId: string) => {
     setResources(prev => prev.map(resource => 
@@ -238,17 +319,158 @@ export function ResourcesPage({ user, onBack }: ResourcesPageProps) {
       </div>
 
       <div className="max-w-6xl mx-auto p-6">
+        {/* Daily Bloom Dose */}
+        {dailyDose && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-yellow-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <Gift className="w-6 h-6 mr-2 text-yellow-500" />
+                Daily Bloom Dose
+                <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                  AI Generated
+                </span>
+              </h2>
+              <button
+                onClick={loadDailyDose}
+                className="text-xs text-gray-600 hover:text-gray-800"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="bg-white rounded-xl p-4">
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">{dailyDose.type === 'affirmation' ? '💝' : dailyDose.type === 'tip' ? '💡' : dailyDose.type === 'quote' ? '💭' : '🎯'}</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800 mb-2">{dailyDose.title}</h3>
+                  <p className="text-sm text-gray-700">{dailyDose.content}</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* AI Recommendations */}
+        {aiRecommendations.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl shadow-lg p-6 border-2 border-purple-200"
+          >
+            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+              <Brain className="w-6 h-6 mr-2 text-purple-500" />
+              AI-Curated Recommendations
+              <Sparkles className="w-5 h-5 ml-2 text-purple-500" />
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {aiRecommendations.map((resource, idx) => (
+                <motion.div
+                  key={resource.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-start space-x-3">
+                    <span className="text-2xl">{resource.icon || '📚'}</span>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-800 mb-1">{resource.title}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{resource.description}</p>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                          {Math.round(resource.relevance * 100)}% Match
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Learning Path */}
+        {learningPath && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-white rounded-2xl shadow-lg p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <Target className="w-6 h-6 mr-2 text-blue-500" />
+                Learning Path
+              </h2>
+              <span className="text-sm font-medium text-gray-600">
+                {Math.round(learningPath.progress)}% Complete
+              </span>
+            </div>
+            <div className="space-y-3">
+              {learningPath.topics.map((topic, idx) => (
+                <motion.div
+                  key={topic.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className={`flex items-center space-x-3 p-3 rounded-lg ${
+                    topic.unlocked
+                      ? topic.completed
+                        ? 'bg-green-50 border-2 border-green-200'
+                        : 'bg-blue-50 border-2 border-blue-200'
+                      : 'bg-gray-50 border-2 border-gray-200 opacity-60'
+                  }`}
+                >
+                  {topic.completed ? (
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  ) : topic.unlocked ? (
+                    <div className="w-5 h-5 border-2 border-blue-500 rounded-full flex-shrink-0" />
+                  ) : (
+                    <Unlock className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-800">{topic.title}</h3>
+                  </div>
+                  {topic.unlocked && !topic.completed && (
+                    <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                      Start
+                    </button>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Search and Filters */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <input
                 type="text"
                 placeholder="Search resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              <button
+                onClick={() => setShowVoiceSearch(true)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-blue-600 transition-colors"
+                title="Voice Search"
+              >
+                {isRecording ? (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  >
+                    <MicOff className="w-4 h-4 text-red-500" />
+                  </motion.div>
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
+              </button>
             </div>
             <div className="flex space-x-2">
               <button
@@ -495,6 +717,70 @@ export function ResourcesPage({ user, onBack }: ResourcesPageProps) {
                   Close
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voice Search Modal */}
+      <AnimatePresence>
+        {showVoiceSearch && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-6 max-w-md w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                  <Mic className="w-5 h-5 mr-2 text-blue-500" />
+                  Voice Search
+                </h3>
+                <button
+                  onClick={() => setShowVoiceSearch(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="text-center mb-6">
+                {isRecording ? (
+                  <div className="space-y-3">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="w-16 h-16 bg-red-500 rounded-full mx-auto flex items-center justify-center"
+                    >
+                      <MicOff className="w-8 h-8 text-white" />
+                    </motion.div>
+                    <p className="text-sm font-medium text-gray-700">Listening...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Mic className="w-12 h-12 text-blue-500 mx-auto" />
+                    <p className="text-sm font-medium text-gray-700">Say what you're looking for</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleVoiceSearch}
+                disabled={isRecording}
+                className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                  isRecording
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600'
+                }`}
+              >
+                {isRecording ? 'Stop Recording' : 'Start Voice Search'}
+              </button>
             </motion.div>
           </motion.div>
         )}

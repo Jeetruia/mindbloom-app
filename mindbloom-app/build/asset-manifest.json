@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/static/css/main.effd68dc.css",
-    "main.js": "/static/js/main.83cf1874.js",
-    "index.html": "/index.html",
-    "main.effd68dc.css.map": "/static/css/main.effd68dc.css.map",
-    "main.83cf1874.js.map": "/static/js/main.83cf1874.js.map"
+    "main.css": "/mindbloom-app/static/css/main.0bbd2765.css",
+    "main.js": "/mindbloom-app/static/js/main.52fe2897.js",
+    "index.html": "/mindbloom-app/index.html",
+    "main.0bbd2765.css.map": "/mindbloom-app/static/css/main.0bbd2765.css.map",
+    "main.52fe2897.js.map": "/mindbloom-app/static/js/main.52fe2897.js.map"
   },
   "entrypoints": [
-    "static/css/main.effd68dc.css",
-    "static/js/main.83cf1874.js"
+    "static/css/main.0bbd2765.css",
+    "static/js/main.52fe2897.js"
   ]
 }

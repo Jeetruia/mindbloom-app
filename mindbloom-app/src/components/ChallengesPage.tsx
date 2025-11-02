@@ -16,6 +16,10 @@ import {
   Gem,
   Leaf
 } from 'lucide-react';
+import { BreathingDragonGame } from './BreathingDragonGame';
+import { GratitudeGame } from './GratitudeGame';
+import { xpService } from '../services/xpService';
+import { useStore } from '../hooks/useStore';
 
 interface Challenge {
   id: string;
@@ -141,11 +145,20 @@ const categories = [
 ];
 
 export function ChallengesPage({ user, onBack }: ChallengesPageProps) {
+  const { user: storeUser, setUser: setStoreUser } = useStore();
   const [challenges, setChallenges] = useState<Challenge[]>(sampleChallenges);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showMiniGame, setShowMiniGame] = useState<string | null>(null);
-  const [userXP, setUserXP] = useState(150);
-  const [userLevel, setUserLevel] = useState(3);
+  const [userXP, setUserXP] = useState(storeUser?.xp || 150);
+  const [userLevel, setUserLevel] = useState(storeUser?.avatarLevel || 3);
+
+  useEffect(() => {
+    if (storeUser) {
+      const levelProgress = xpService.getLevelProgress(storeUser.xp || 0);
+      setUserXP(storeUser.xp || 0);
+      setUserLevel(levelProgress.currentLevel);
+    }
+  }, [storeUser]);
 
   const filteredChallenges = selectedCategory === 'all' 
     ? challenges 
@@ -155,29 +168,83 @@ export function ChallengesPage({ user, onBack }: ChallengesPageProps) {
   const weeklyChallenges = challenges.filter(c => c.type === 'weekly' && c.isActive);
   const miniGames = challenges.filter(c => c.type === 'mini-game' && c.isActive);
 
-  const handleCompleteChallenge = (challengeId: string) => {
-    setChallenges(prev => prev.map(challenge => 
-      challenge.id === challengeId 
-        ? { 
-            ...challenge, 
-            isCompleted: true,
-            streak: challenge.streak + 1
-          }
-        : challenge
-    ));
-    
+  const handleCompleteChallenge = async (challengeId: string) => {
     const challenge = challenges.find(c => c.id === challengeId);
-    if (challenge) {
-      setUserXP(prev => prev + challenge.xpReward);
-      // Check for level up
-      if (userXP + challenge.xpReward >= userLevel * 100) {
-        setUserLevel(prev => prev + 1);
-      }
+    if (!challenge || !storeUser) return;
+
+    // Update challenge status
+    setChallenges(prev => prev.map(ch => 
+      ch.id === challengeId 
+        ? { 
+            ...ch, 
+            isCompleted: true,
+            streak: ch.streak + 1
+          }
+        : ch
+    ));
+
+    // Add XP using service
+    const result = await xpService.addXP(storeUser.id, userXP, {
+      id: `challenge-${challengeId}-${Date.now()}`,
+      type: 'challenge',
+      xp: challenge.xpReward,
+      description: `Completed: ${challenge.title}`,
+      metadata: { challengeId, challengeType: challenge.type }
+    });
+
+    setUserXP(result.newXP);
+    setUserLevel(result.newLevel);
+
+    // Update store user
+    if (setStoreUser) {
+      setStoreUser({
+        ...storeUser,
+        xp: result.newXP,
+        avatarLevel: result.newLevel,
+      });
+    }
+
+    // Show level up notification
+    if (result.levelUp) {
+      // Could show a notification here
+      console.log('Level up!', result.newLevel);
     }
   };
 
   const handleStartMiniGame = (challengeId: string) => {
     setShowMiniGame(challengeId);
+  };
+
+  const handleGameComplete = async (xp: number) => {
+    if (!storeUser) return;
+
+    const result = await xpService.addXP(storeUser.id, userXP, {
+      id: `game-${Date.now()}`,
+      type: 'game',
+      xp,
+      description: 'Completed Breathing Dragon Game',
+      metadata: { gameType: 'breathing-dragon' }
+    });
+
+    setUserXP(result.newXP);
+    setUserLevel(result.newLevel);
+
+    // Update store user
+    if (setStoreUser) {
+      setStoreUser({
+        ...storeUser,
+        xp: result.newXP,
+        avatarLevel: result.newLevel,
+      });
+    }
+
+    // Update challenge completion
+    const breathingChallenge = challenges.find(c => c.title === 'Breathing Dragon');
+    if (breathingChallenge) {
+      handleCompleteChallenge(breathingChallenge.id);
+    }
+
+    setShowMiniGame(null);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -380,11 +447,17 @@ export function ChallengesPage({ user, onBack }: ChallengesPageProps) {
 
                 {!challenge.isCompleted && (
                   <button
-                    onClick={() => handleCompleteChallenge(challenge.id)}
+                    onClick={() => {
+                      if (challenge.type === 'mini-game') {
+                        handleStartMiniGame(challenge.id);
+                      } else {
+                        handleCompleteChallenge(challenge.id);
+                      }
+                    }}
                     className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 px-4 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center space-x-2"
                   >
                     <Play className="w-4 h-4" />
-                    <span>Start Adventure</span>
+                    <span>{challenge.type === 'mini-game' ? 'Play Game' : 'Start Adventure'}</span>
                   </button>
                 )}
 
@@ -519,6 +592,22 @@ export function ChallengesPage({ user, onBack }: ChallengesPageProps) {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Game Modals */}
+      <AnimatePresence>
+        {showMiniGame === '3' && (
+          <BreathingDragonGame
+            onClose={() => setShowMiniGame(null)}
+            onComplete={handleGameComplete}
+          />
+        )}
+        {showMiniGame === '2' && (
+          <GratitudeGame
+            onClose={() => setShowMiniGame(null)}
+            onComplete={handleGameComplete}
+          />
         )}
       </AnimatePresence>
     </div>

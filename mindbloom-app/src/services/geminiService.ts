@@ -1,3 +1,5 @@
+import { vertexAIService } from './vertexAIService';
+
 interface GeminiMessage {
   role: 'user' | 'model';
   parts: { text: string }[];
@@ -14,12 +16,30 @@ interface GeminiResponse {
 class GeminiService {
   private apiKey: string;
   private baseUrl: string = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+  private useVertexAI: boolean;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
+    // Use Vertex AI if proxy is configured, otherwise fallback to free API
+    this.useVertexAI = !!process.env.REACT_APP_GOOGLE_CLOUD_PROXY_URL;
   }
 
   async generateResponse(messages: GeminiMessage[]): Promise<string> {
+    // Try Vertex AI first if configured
+    if (this.useVertexAI) {
+      try {
+        return await vertexAIService.generateResponse(messages);
+      } catch (error) {
+        console.warn('Vertex AI failed, falling back to free API:', error);
+        // Fall through to free API
+      }
+    }
+
+    // Fallback to free Gemini API
+    if (!this.apiKey) {
+      throw new Error('No API key configured for Gemini API');
+    }
+
     try {
       const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
         method: 'POST',

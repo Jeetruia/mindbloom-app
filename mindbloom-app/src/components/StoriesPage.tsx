@@ -12,8 +12,21 @@ import {
   Users,
   TrendingUp,
   Clock,
-  Award
+  Award,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Brain,
+  Activity,
+  Flower2,
+  Zap
 } from 'lucide-react';
+import { storyService, BloomMeter } from '../services/storyService';
+import { useStore } from '../hooks/useStore';
+import { xpService } from '../services/xpService';
 
 interface Story {
   id: string;
@@ -98,6 +111,7 @@ const themes = [
 ];
 
 export function StoriesPage({ user, onBack }: StoriesPageProps) {
+  const { setUser } = useStore();
   const [stories, setStories] = useState<Story[]>(sampleStories);
   const [selectedTheme, setSelectedTheme] = useState('all');
   const [showShareModal, setShowShareModal] = useState(false);
@@ -106,12 +120,134 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
     content: '',
     theme: 'daily-wins' as Story['theme']
   });
+  
+  // AI Features
+  const [isRecording, setIsRecording] = useState(false);
+  const [isNarrating, setIsNarrating] = useState<string | null>(null);
+  const [bloomMeter, setBloomMeter] = useState<BloomMeter | null>(null);
+  const [emotionTags, setEmotionTags] = useState<Map<string, string[]>>(new Map());
+  const [showAIStoryModal, setShowAIStoryModal] = useState(false);
 
   const filteredStories = selectedTheme === 'all' 
     ? stories 
     : stories.filter(story => story.theme === selectedTheme);
 
   const spotlightStory = stories.find(story => story.isSpotlight);
+
+  // Load bloom meter and emotion tags
+  useEffect(() => {
+    if (user && stories.length > 0) {
+      loadBloomMeter();
+      loadEmotionTags();
+    }
+  }, [user, stories]);
+
+  const loadBloomMeter = async () => {
+    if (!user) return;
+    try {
+      const bloomStories = stories.map(s => ({
+        id: s.id,
+        title: s.title,
+        content: s.content,
+        author: s.author,
+        timestamp: s.timestamp,
+      }));
+      const meter = await storyService.calculateBloomMeter(user.id, bloomStories);
+      setBloomMeter(meter);
+    } catch (error) {
+      console.error('Error loading bloom meter:', error);
+    }
+  };
+
+  const loadEmotionTags = async () => {
+    try {
+      const tagsMap = new Map<string, string[]>();
+      for (const story of stories) {
+        const tags = await storyService.generateEmotionTags(story.content);
+        tagsMap.set(story.id, tags);
+      }
+      setEmotionTags(tagsMap);
+    } catch (error) {
+      console.error('Error loading emotion tags:', error);
+    }
+  };
+
+  const handleVoiceStory = async () => {
+    if (!user) return;
+    
+    setIsRecording(true);
+    try {
+      const result = await storyService.recordVoiceStory(user.id);
+      
+      // Create story from voice
+      const story: Story = {
+        id: Date.now().toString(),
+        title: result.title,
+        content: result.story,
+        author: user.nickname || 'Anonymous',
+        theme: 'daily-wins',
+        timestamp: new Date(),
+        likes: 0,
+        isLiked: false,
+        isAnonymous: true,
+        isSpotlight: false,
+        xpEarned: 25,
+      };
+      
+      setStories(prev => [story, ...prev]);
+      setShowAIStoryModal(false);
+      
+      // Award XP
+      const xpResult = await xpService.addXP(user.id, user.xp || 0, {
+        id: `voice-story-${Date.now()}`,
+        type: 'journal',
+        xp: 25,
+        description: 'AI narrative story',
+      });
+
+      if (setUser) {
+        setUser({
+          ...user,
+          xp: xpResult.newXP,
+          avatarLevel: xpResult.newLevel,
+        });
+      }
+
+      // Reload bloom meter and tags
+      await loadBloomMeter();
+      await loadEmotionTags();
+    } catch (error) {
+      console.error('Error with voice story:', error);
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
+  const handleNarrateStory = async (storyId: string) => {
+    const story = stories.find(s => s.id === storyId);
+    if (!story) return;
+
+    if (isNarrating === storyId) {
+      // Stop narration
+      setIsNarrating(null);
+      return;
+    }
+
+    setIsNarrating(storyId);
+    try {
+      await storyService.narrateStory({
+        id: story.id,
+        title: story.title,
+        content: story.content,
+        author: story.author,
+        timestamp: story.timestamp,
+      });
+    } catch (error) {
+      console.error('Error narrating story:', error);
+    } finally {
+      setIsNarrating(null);
+    }
+  };
 
   const handleLike = (storyId: string) => {
     setStories(prev => prev.map(story => 
@@ -125,13 +261,21 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
     ));
   };
 
-  const handleShareStory = () => {
-    if (newStory.title.trim() && newStory.content.trim()) {
+  const handleShareStory = async () => {
+    if (newStory.title.trim() && newStory.content.trim() && user) {
+      // Generate emotion tags
+      const tags = await storyService.generateEmotionTags(newStory.content);
+      setEmotionTags(prev => {
+        const newMap = new Map(prev);
+        newMap.set(Date.now().toString(), tags);
+        return newMap;
+      });
+
       const story: Story = {
         id: Date.now().toString(),
         title: newStory.title.trim(),
         content: newStory.content.trim(),
-        author: user?.nickname || 'Anonymous',
+        author: user.nickname || 'Anonymous',
         theme: newStory.theme,
         timestamp: new Date(),
         likes: 0,
@@ -144,6 +288,25 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
       setStories(prev => [story, ...prev]);
       setNewStory({ title: '', content: '', theme: 'daily-wins' });
       setShowShareModal(false);
+
+      // Award XP
+      const xpResult = await xpService.addXP(user.id, user.xp || 0, {
+        id: `story-${Date.now()}`,
+        type: 'journal',
+        xp: 10,
+        description: 'Shared story',
+      });
+
+      if (setUser) {
+        setUser({
+          ...user,
+          xp: xpResult.newXP,
+          avatarLevel: xpResult.newLevel,
+        });
+      }
+
+      // Reload bloom meter
+      await loadBloomMeter();
     }
   };
 
@@ -177,17 +340,117 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
               <p className="text-gray-600">Share your journey, inspire others</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowShareModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Share Story</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowAIStoryModal(true)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center space-x-2"
+            >
+              {isRecording ? (
+                <>
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    className="w-4 h-4 bg-red-500 rounded-full"
+                  />
+                  <span>Recording...</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="w-4 h-4" />
+                  <span>AI Narrative Mode</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Share Story</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-6">
+        {/* Bloom Meter */}
+        {bloomMeter && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl shadow-lg p-6 border-2 border-purple-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <Flower2 className="w-6 h-6 mr-2 text-purple-500" />
+                Bloom Meter
+                <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                  AI Powered
+                </span>
+              </h2>
+              <div className="flex items-center space-x-2">
+                {bloomMeter.emotionalTrend === 'growing' && (
+                  <>
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-semibold text-green-600">Growing</span>
+                  </>
+                )}
+                {bloomMeter.emotionalTrend === 'declining' && (
+                  <>
+                    <TrendingUp className="w-5 h-5 text-red-500 rotate-180" />
+                    <span className="text-sm font-semibold text-red-600">Declining</span>
+                  </>
+                )}
+                {bloomMeter.emotionalTrend === 'stable' && (
+                  <>
+                    <Activity className="w-5 h-5 text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-600">Stable</span>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Overall Bloom Score */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-700">Overall Bloom</span>
+                  <span className="text-2xl font-bold text-purple-600">
+                    {Math.round(bloomMeter.overallBloom)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-4">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${bloomMeter.overallBloom}%` }}
+                    transition={{ duration: 1 }}
+                    className="bg-gradient-to-r from-pink-400 to-purple-500 h-4 rounded-full"
+                  />
+                </div>
+              </div>
+
+              {/* Evolution Timeline */}
+              {bloomMeter.evolution && bloomMeter.evolution.length > 0 && (
+                <div>
+                  <span className="text-sm text-gray-700 mb-2 block">Emotional Evolution</span>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+                    {bloomMeter.evolution.slice(-7).map((entry, idx) => (
+                      <div key={idx} className="flex flex-col items-center min-w-[60px]">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold mb-1">
+                          {Math.round(entry.bloomScore)}
+                        </div>
+                        <span className="text-xs text-gray-600">
+                          {entry.date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Daily Spotlight */}
         {spotlightStory && (
           <motion.div
@@ -275,6 +538,23 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
 
                 <p className="text-gray-700 mb-4 leading-relaxed">{story.content}</p>
 
+                {/* Emotion Tags */}
+                {emotionTags.has(story.id) && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {emotionTags.get(story.id)?.map((tag, idx) => (
+                      <motion.span
+                        key={idx}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                      >
+                        {tag}
+                      </motion.span>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <button
@@ -297,6 +577,29 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
                     <button className="flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                       <Share2 className="w-4 h-4" />
                       <span className="text-sm">Share</span>
+                    </button>
+                    
+                    {/* Listen Mode */}
+                    <button
+                      onClick={() => handleNarrateStory(story.id)}
+                      className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-colors ${
+                        isNarrating === story.id
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      title="Listen to story"
+                    >
+                      {isNarrating === story.id ? (
+                        <>
+                          <Pause className="w-4 h-4" />
+                          <span className="text-sm">Pause</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-4 h-4" />
+                          <span className="text-sm">Listen</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -425,6 +728,92 @@ export function StoriesPage({ user, onBack }: StoriesPageProps) {
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Share Story
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Narrative Mode Modal */}
+      <AnimatePresence>
+        {showAIStoryModal && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-6 max-w-md w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                  <Brain className="w-5 h-5 mr-2 text-purple-500" />
+                  AI Narrative Mode
+                </h3>
+                <button
+                  onClick={() => setShowAIStoryModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                Speak your story, and AI will transform it into a beautiful, reflective narrative.
+              </p>
+
+              <div className="space-y-4">
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  {isRecording ? (
+                    <div className="space-y-3">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                        className="w-16 h-16 bg-red-500 rounded-full mx-auto flex items-center justify-center"
+                      >
+                        <MicOff className="w-8 h-8 text-white" />
+                      </motion.div>
+                      <p className="text-sm font-medium text-gray-700">Recording your story...</p>
+                      <p className="text-xs text-gray-500">Click to stop</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <Mic className="w-12 h-12 text-purple-500 mx-auto" />
+                      <p className="text-sm font-medium text-gray-700">Ready to record</p>
+                      <p className="text-xs text-gray-500">Click the button below to start</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleVoiceStory}
+                  disabled={isRecording}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                    isRecording
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                  }`}
+                >
+                  {isRecording ? (
+                    <span className="flex items-center justify-center space-x-2">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                        className="w-3 h-3 bg-white rounded-full"
+                      />
+                      <span>Stop Recording</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center space-x-2">
+                      <Mic className="w-4 h-4" />
+                      <span>Start Recording</span>
+                    </span>
+                  )}
                 </button>
               </div>
             </motion.div>
